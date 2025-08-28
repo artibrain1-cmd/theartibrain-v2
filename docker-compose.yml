@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:14
+    container_name: theartibrain_postgres
+    environment:
+      POSTGRES_DB: theartibraindb
+      POSTGRES_USER: theartibrainuser
+      POSTGRES_PASSWORD: theartibrainpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - theartibrain_network
+
+  # Redis (for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: theartibrain_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - theartibrain_network
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: theartibrain_app
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://theartibrainuser:theartibrainpassword@postgres:5432/theartibraindb?schema=public
+      - NEXTAUTH_SECRET=your_nextauth_secret_here
+      - NEXTAUTH_URL=http://localhost:3000
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - theartibrain_network
+    command: npm run dev
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  theartibrain_network:
+    driver: bridge
+
